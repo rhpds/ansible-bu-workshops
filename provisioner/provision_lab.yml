@@ -135,6 +135,14 @@
         - controllerinstall|bool
         - populatecontroller
 
+    - name: Include custom role for lb1437
+      ansible.builtin.include_role:
+        name: ../roles/lb1437_workload
+      when:
+        - controllerinstall is defined
+        - controllerinstall|bool
+        - populatecontroller
+
 - name: Configure private automation hub
   hosts: 'automation_hub'
   gather_facts: true
