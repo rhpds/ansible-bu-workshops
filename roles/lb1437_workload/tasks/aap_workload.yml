@@ -1,0 +1,105 @@
+---
+- name: Install collections
+  ansible.builtin.command:
+    cmd: ansible-galaxy collection install ansible.eda cisco.ios git+https://github.com/zjpeterson/network.telemetry.git
+    creates: /home/student/.ansible/collections/ansible_collections/network/telemetry
+
+- name: Pull down git repo
+  ansible.builtin.git:
+    repo: https://github.com/zjpeterson/ansible-cisco-telemetry.git
+    dest: /home/student/ansible-cisco-telemetry
+
+- name: Copy inventory
+  ansible.builtin.copy:
+    src: /home/student/lab_inventory/hosts
+    dest: /home/student/ansible-cisco-telemetry/inventory
+    remote_src: true
+
+- name: Apply ansible-navigator defaults
+  ansible.builtin.blockinfile:
+    dest: /home/student/.ansible-navigator.yml
+    block: |
+      {% filter indent(width=2, first=true) %}
+      mode: stdout
+      playbook-artifact:
+        enable: false
+      {% endfilter %}
+
+- name: Don't use a stdout callback
+  ansible.builtin.lineinfile:
+    path: /etc/ansible/ansible.cfg
+    regexp: '^stdout_callback'
+    state: absent
+  become: true
+
+- name: Pull YANG Suite image
+  containers.podman.podman_image:
+    name: quay.io/zachp/yangsuite
+  become: true
+
+- name: Add project in Controller
+  ansible.controller.project:
+    controller_username: admin
+    controller_password: "{{ admin_password }}"
+    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    validate_certs: false
+    name: Cisco Telemetry
+    organization: Default
+    scm_type: git
+    scm_url: https://github.com/zjpeterson/ansible-cisco-telemetry.git
+
+- name: Add vars to Controller hosts
+  vars:
+    _new_vars: "{{ lookup('file', playbook_dir + '/../playbooks/host_vars/' + item.name + '.yml') | from_yaml }}"
+  ansible.controller.host:
+    controller_username: admin
+    controller_password: "{{ admin_password }}"
+    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    validate_certs: false
+    name: "{{ item.name }}"
+    inventory: Workshop Inventory
+    variables: "{{ item.variables | from_yaml | combine(_new_vars) }}"
+  loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=inventory_hostname, username='admin', password=admin_password) }}"
+  when: item.name in ['rtr1', 'rtr2']
+
+- name: Get Controller token
+  ansible.controller.token:
+    controller_username: admin
+    controller_password: "{{ admin_password }}"
+    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    validate_certs: false
+    description: EDA Controller
+    scope: write
+
+- name: Add Controller token in EDA
+  ansible.eda.credential:
+    controller_username: admin
+    controller_password: "{{ admin_password }}"
+    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    validate_certs: false
+    name: Automation Controller
+    organization: Default
+    credential_type_name: Red Hat Ansible Automation Platform
+    inputs:
+      oauth_token: "{{ controller_token.token }}"
+      host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}/api/controller/"
+
+- name: Add project in EDA
+  ansible.eda.project:
+    controller_username: admin
+    controller_password: "{{ admin_password }}"
+    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    validate_certs: false
+    name: Cisco Telemetry
+    organization: Default
+    url: https://github.com/zjpeterson/ansible-cisco-telemetry.git
+
+- name: Add upstream DE
+  ansible.eda.decision_environment:
+    controller_username: admin
+    controller_password: "{{ admin_password }}"
+    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    validate_certs: false
+    name: Quay DE
+    organization: Default
+    image_url: quay.io/ansible/ansible-rulebook:v1.1.3
