@@ -1,4 +1,10 @@
 ---
+- name: Set controller host name and port
+  set_fact:
+    _automation_controller_hostname: "{{ ansible_host }}:{{ aap_port | default('443') }}"
+    _automation_controller_username: admin
+    _automation_controller_password: "{{ admin_password }}"
+
 - name: Install collections
   ansible.builtin.command:
     cmd: ansible-galaxy collection install ansible.eda cisco.ios git+https://github.com/zjpeterson/network.telemetry.git
@@ -39,9 +45,9 @@
 
 - name: Add project in Controller
   ansible.controller.project:
-    controller_username: admin
-    controller_password: "{{ admin_password }}"
-    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
     validate_certs: false
     name: Cisco Telemetry
     organization: Default
@@ -50,45 +56,45 @@
 
 - name: Add vars to Controller hosts
   vars:
-    _new_vars: "{{ lookup('file', playbook_dir + '/../playbooks/host_vars/' + item.name + '.yml') | from_yaml }}"
+    _new_vars: "{{ lookup('file', role_path + '/files/host_vars/' + item.name + '.yml') | from_yaml }}"
   ansible.controller.host:
-    controller_username: admin
-    controller_password: "{{ admin_password }}"
-    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
     validate_certs: false
     name: "{{ item.name }}"
     inventory: Workshop Inventory
     variables: "{{ item.variables | from_yaml | combine(_new_vars) }}"
-  loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=inventory_hostname, username='admin', password=admin_password) }}"
+  loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=_automation_controller_hostname, username=_automation_controller_username, password=_automation_controller_password) }}"
   when: item.name in ['rtr1', 'rtr2']
 
 - name: Get Controller token
   ansible.controller.token:
-    controller_username: admin
-    controller_password: "{{ admin_password }}"
-    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
     validate_certs: false
     description: EDA Controller
     scope: write
 
 - name: Add Controller token in EDA
   ansible.eda.credential:
-    controller_username: admin
-    controller_password: "{{ admin_password }}"
-    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
     validate_certs: false
     name: Automation Controller
     organization: Default
     credential_type_name: Red Hat Ansible Automation Platform
     inputs:
       oauth_token: "{{ controller_token.token }}"
-      host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}/api/controller/"
+      host: "https://{{ _automation_controller_hostname }}/api/controller/"
 
 - name: Add project in EDA
   ansible.eda.project:
-    controller_username: admin
-    controller_password: "{{ admin_password }}"
-    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
     validate_certs: false
     name: Cisco Telemetry
     organization: Default
@@ -96,9 +102,9 @@
 
 - name: Add upstream DE
   ansible.eda.decision_environment:
-    controller_username: admin
-    controller_password: "{{ admin_password }}"
-    controller_host: "https://{{ ansible_host }}:{{ aap_port | default('443') }}"
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
     validate_certs: false
     name: Quay DE
     organization: Default
