@@ -65,7 +65,7 @@
     name: "{{ item.name }}"
     inventory: Workshop Inventory
     variables: "{{ item.variables | from_yaml | combine(_new_vars) }}"
-  loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=_automation_controller_hostname, username=_automation_controller_username, password=_automation_controller_password) }}"
+  loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=_automation_controller_hostname, username=_automation_controller_username, password=_automation_controller_password, verify_ssl=False) }}"
   when: item.name in ['rtr1', 'rtr2']
 
 - name: Get Controller token
