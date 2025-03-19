@@ -136,6 +136,7 @@
         - populatecontroller
 
     - name: Include custom role for lb1437
+      become: false
       ansible.builtin.include_role:
         name: ../roles/lb1437_workload
       when:
