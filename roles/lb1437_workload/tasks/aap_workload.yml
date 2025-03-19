@@ -6,30 +6,29 @@
     _automation_controller_password: "{{ admin_password }}"
 
 - name: Run following tasks as student
-  become_user: student
   become: true
   block:
     - name: Install collections
+      become_user: student
       ansible.builtin.command:
         cmd: ansible-galaxy collection install ansible.eda cisco.ios git+https://github.com/zjpeterson/network.telemetry.git
         creates: /home/student/.ansible/collections/ansible_collections/network/telemetry
 
     - name: Pull down git repo
       become_user: student
-      become: true
       ansible.builtin.git:
         repo: https://github.com/zjpeterson/ansible-cisco-telemetry.git
         dest: /home/student/ansible-cisco-telemetry
 
     - name: Copy inventory
       become_user: student
-      become: true
       ansible.builtin.copy:
         src: /home/student/lab_inventory/hosts
         dest: /home/student/ansible-cisco-telemetry/inventory
         remote_src: true
 
     - name: Apply ansible-navigator defaults
+      become_user: student
       ansible.builtin.blockinfile:
         dest: /home/student/.ansible-navigator.yml
         block: |
@@ -47,6 +46,7 @@
       become: true
 
     - name: Pull YANG Suite image
+      become_user: student
       containers.podman.podman_image:
         name: quay.io/zachp/yangsuite
       become: true
