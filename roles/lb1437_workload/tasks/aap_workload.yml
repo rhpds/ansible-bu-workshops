@@ -5,115 +5,69 @@
     _automation_controller_username: admin
     _automation_controller_password: "{{ admin_password }}"
 
-- name: Run following tasks as student
-  become: true
-  block:
-    - name: Install collections
-      become_user: student
-      ansible.builtin.command:
-        cmd: ansible-galaxy collection install ansible.eda cisco.ios git+https://github.com/zjpeterson/network.telemetry.git
-        creates: /home/student/.ansible/collections/ansible_collections/network/telemetry
+- name: Add project in Controller
+  ansible.controller.project:
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
+    validate_certs: false
+    name: Cisco Telemetry
+    organization: Default
+    scm_type: git
+    scm_url: https://github.com/zjpeterson/ansible-cisco-telemetry.git
 
-    - name: Pull down git repo
-      become_user: student
-      ansible.builtin.git:
-        repo: https://github.com/zjpeterson/ansible-cisco-telemetry.git
-        dest: /home/student/ansible-cisco-telemetry
+- name: Add vars to Controller hosts
+  vars:
+    _new_vars: "{{ lookup('file', role_path + '/files/host_vars/' + item.name + '.yml') | from_yaml }}"
+  ansible.controller.host:
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
+    validate_certs: false
+    name: "{{ item.name }}"
+    inventory: Workshop Inventory
+    variables: "{{ item.variables | from_yaml | combine(_new_vars) }}"
+  loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=_automation_controller_hostname, username=_automation_controller_username, password=_automation_controller_password, verify_ssl=False) }}"
+  when: item.name in ['rtr1', 'rtr2']
 
-    - name: Copy inventory
-      become_user: student
-      ansible.builtin.copy:
-        src: /home/student/lab_inventory/hosts
-        dest: /home/student/ansible-cisco-telemetry/inventory
-        remote_src: true
+- name: Get Controller token
+  ansible.controller.token:
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
+    validate_certs: false
+    description: EDA Controller
+    scope: write
 
-    - name: Apply ansible-navigator defaults
-      become_user: student
-      ansible.builtin.blockinfile:
-        dest: /home/student/.ansible-navigator.yml
-        block: |
-          {% filter indent(width=2, first=true) %}
-          mode: stdout
-          playbook-artifact:
-            enable: false
-          {% endfilter %}
+- name: Add Controller token in EDA
+  ansible.eda.credential:
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
+    validate_certs: false
+    name: Automation Controller
+    organization: Default
+    credential_type_name: Red Hat Ansible Automation Platform
+    inputs:
+      oauth_token: "{{ controller_token.token }}"
+      host: "https://{{ _automation_controller_hostname }}/api/controller/"
 
-    - name: Don't use a stdout callback
-      ansible.builtin.lineinfile:
-        path: /etc/ansible/ansible.cfg
-        regexp: '^stdout_callback'
-        state: absent
-      become: true
+- name: Add project in EDA
+  ansible.eda.project:
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
+    validate_certs: false
+    name: Cisco Telemetry
+    organization: Default
+    url: https://github.com/zjpeterson/ansible-cisco-telemetry.git
 
-    - name: Pull YANG Suite image
-      become_user: student
-      containers.podman.podman_image:
-        name: quay.io/zachp/yangsuite
-      become: true
-
-    - name: Add project in Controller
-      ansible.controller.project:
-        controller_username: "{{ _automation_controller_username }}"
-        controller_password: "{{ _automation_controller_password }}"
-        controller_host: "https://{{ _automation_controller_hostname }}"
-        validate_certs: false
-        name: Cisco Telemetry
-        organization: Default
-        scm_type: git
-        scm_url: https://github.com/zjpeterson/ansible-cisco-telemetry.git
-
-    - name: Add vars to Controller hosts
-      vars:
-        _new_vars: "{{ lookup('file', role_path + '/files/host_vars/' + item.name + '.yml') | from_yaml }}"
-      ansible.controller.host:
-        controller_username: "{{ _automation_controller_username }}"
-        controller_password: "{{ _automation_controller_password }}"
-        controller_host: "https://{{ _automation_controller_hostname }}"
-        validate_certs: false
-        name: "{{ item.name }}"
-        inventory: Workshop Inventory
-        variables: "{{ item.variables | from_yaml | combine(_new_vars) }}"
-      loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=_automation_controller_hostname, username=_automation_controller_username, password=_automation_controller_password, verify_ssl=False) }}"
-      when: item.name in ['rtr1', 'rtr2']
-
-    - name: Get Controller token
-      ansible.controller.token:
-        controller_username: "{{ _automation_controller_username }}"
-        controller_password: "{{ _automation_controller_password }}"
-        controller_host: "https://{{ _automation_controller_hostname }}"
-        validate_certs: false
-        description: EDA Controller
-        scope: write
-
-    - name: Add Controller token in EDA
-      ansible.eda.credential:
-        controller_username: "{{ _automation_controller_username }}"
-        controller_password: "{{ _automation_controller_password }}"
-        controller_host: "https://{{ _automation_controller_hostname }}"
-        validate_certs: false
-        name: Automation Controller
-        organization: Default
-        credential_type_name: Red Hat Ansible Automation Platform
-        inputs:
-          oauth_token: "{{ controller_token.token }}"
-          host: "https://{{ _automation_controller_hostname }}/api/controller/"
-
-    - name: Add project in EDA
-      ansible.eda.project:
-        controller_username: "{{ _automation_controller_username }}"
-        controller_password: "{{ _automation_controller_password }}"
-        controller_host: "https://{{ _automation_controller_hostname }}"
-        validate_certs: false
-        name: Cisco Telemetry
-        organization: Default
-        url: https://github.com/zjpeterson/ansible-cisco-telemetry.git
-
-    - name: Add upstream DE
-      ansible.eda.decision_environment:
-        controller_username: "{{ _automation_controller_username }}"
-        controller_password: "{{ _automation_controller_password }}"
-        controller_host: "https://{{ _automation_controller_hostname }}"
-        validate_certs: false
-        name: Quay DE
-        organization: Default
-        image_url: quay.io/ansible/ansible-rulebook:v1.1.3
+- name: Add upstream DE
+  ansible.eda.decision_environment:
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
+    validate_certs: false
+    name: Quay DE
+    organization: Default
+    image_url: quay.io/ansible/ansible-rulebook:v1.1.3

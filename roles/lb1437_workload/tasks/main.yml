@@ -1,5 +1,7 @@
 ---
 - name: Include Host workload
+  become: true
+  become_user: student
   ansible.builtin.include_tasks: "{{ role_path }}/tasks/host_workload.yml"
 
 - name: Include AAP workload
