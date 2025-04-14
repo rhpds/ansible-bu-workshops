@@ -1,56 +1,61 @@
 ---
-- name: Install packages
-  ansible.builtin.dnf:
-    name:
-      - java-17-openjdk
-      - python3-pip
-    state: present
+- name: Tasks as root
   become: true
+  become_user: root
+  block:
+    - name: Install packages
+      ansible.builtin.dnf:
+        name:
+          - java-17-openjdk
+          - python3-pip
+        state: present
 
-- name: Install python dependencies
-  ansible.builtin.pip:
-    executable: pip3
-    state: present
-    name:
-      - ansible-rulebook
-      - psycopg[binary]
-      - aiokafka
-      - paramiko
+    - name: Don't use a stdout callback
+      ansible.builtin.lineinfile:
+        path: /etc/ansible/ansible.cfg
+        regexp: '^stdout_callback'
+        state: absent
 
-- name: Install collections
-  ansible.builtin.command:
-    cmd: ansible-galaxy collection install ansible.eda cisco.ios git+https://github.com/zjpeterson/network.telemetry.git
-    creates: /home/student/.ansible/collections/ansible_collections/network/telemetry
+    - name: Pull YANG Suite image
+      containers.podman.podman_image:
+        name: quay.io/zachp/yangsuite
 
-- name: Pull down git repo
-  ansible.builtin.git:
-    repo: https://github.com/zjpeterson/ansible-cisco-telemetry.git
-    dest: /home/student/ansible-cisco-telemetry
-
-- name: Copy inventory
-  ansible.builtin.copy:
-    src: /home/student/lab_inventory/hosts
-    dest: /home/student/ansible-cisco-telemetry/inventory
-    remote_src: true
-
-- name: Apply ansible-navigator defaults
-  ansible.builtin.blockinfile:
-    dest: /home/student/.ansible-navigator.yml
-    block: |
-      {% filter indent(width=2, first=true) %}
-      mode: stdout
-      playbook-artifact:
-        enable: false
-      {% endfilter %}
-
-- name: Don't use a stdout callback
-  ansible.builtin.lineinfile:
-    path: /etc/ansible/ansible.cfg
-    regexp: '^stdout_callback'
-    state: absent
+- name: Tasks as student
   become: true
+  become_user: student
+  block:
+    - name: Install python dependencies
+      ansible.builtin.pip:
+        executable: pip3
+        state: present
+        name:
+          - ansible-rulebook
+          - psycopg[binary]
+          - aiokafka
+          - paramiko
 
-- name: Pull YANG Suite image
-  containers.podman.podman_image:
-    name: quay.io/zachp/yangsuite
-  become: true
+    - name: Install collections
+      ansible.builtin.command:
+        cmd: ansible-galaxy collection install ansible.eda cisco.ios git+https://github.com/zjpeterson/network.telemetry.git
+        creates: /home/student/.ansible/collections/ansible_collections/network/telemetry
+
+    - name: Pull down git repo
+      ansible.builtin.git:
+        repo: https://github.com/zjpeterson/ansible-cisco-telemetry.git
+        dest: /home/student/ansible-cisco-telemetry
+
+    - name: Copy inventory
+      ansible.builtin.copy:
+        src: /home/student/lab_inventory/hosts
+        dest: /home/student/ansible-cisco-telemetry/inventory
+        remote_src: true
+
+    - name: Apply ansible-navigator defaults
+      ansible.builtin.blockinfile:
+        dest: /home/student/.ansible-navigator.yml
+        block: |
+          {% filter indent(width=2, first=true) %}
+          mode: stdout
+          playbook-artifact:
+            enable: false
+          {% endfilter %}
