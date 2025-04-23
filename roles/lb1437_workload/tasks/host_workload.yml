@@ -30,6 +30,7 @@
         state: present
         name:
           - ansible-rulebook
+          - ansible-pylibssh
           - psycopg[binary]
           - aiokafka
           - paramiko
