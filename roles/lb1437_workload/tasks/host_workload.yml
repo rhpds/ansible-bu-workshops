@@ -52,6 +52,7 @@
       loop:
         - .git
         - workshop
+        - README.md
 
     - name: Copy inventory
       ansible.builtin.copy:
