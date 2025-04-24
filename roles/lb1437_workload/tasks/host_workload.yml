@@ -43,11 +43,11 @@
     - name: Pull down git repo
       ansible.builtin.git:
         repo: https://github.com/zjpeterson/ansible-cisco-telemetry.git
-        dest: /home/student/ansible-cisco-telemetry
+        dest: /home/student/telemetry
 
     - name: Remove repo files not needed
       ansible.builtin.file:
-        path: /home/student/ansible-cisco-telemetry/{{ item }}
+        path: /home/student/telemetry/{{ item }}
         state: absent
       loop:
         - .git
@@ -56,7 +56,7 @@
     - name: Copy inventory
       ansible.builtin.copy:
         src: /home/student/lab_inventory/hosts
-        dest: /home/student/ansible-cisco-telemetry/inventory
+        dest: /home/student/telemetry/inventory
         remote_src: true
 
     - name: Apply ansible-navigator defaults
