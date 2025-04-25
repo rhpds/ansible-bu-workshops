@@ -52,6 +52,7 @@
       loop:
         - .git
         - workshop
+        - ee
         - README.md
 
     - name: Copy inventory
