@@ -25,20 +25,6 @@
     name: Lab EE
     image: quay.io/zachp/lab-ee
 
-- name: Add vars to Controller hosts
-  vars:
-    _new_vars: "{{ lookup('file', role_path + '/files/host_vars/' + item.name + '.yml') | from_yaml }}"
-  ansible.controller.host:
-    controller_username: "{{ _automation_controller_username }}"
-    controller_password: "{{ _automation_controller_password }}"
-    controller_host: "https://{{ _automation_controller_hostname }}"
-    validate_certs: false
-    name: "{{ item.name }}"
-    inventory: Workshop Inventory
-    variables: "{{ item.variables | from_yaml | combine(_new_vars) }}"
-  loop: "{{ lookup('ansible.controller.controller_api', 'hosts', host=_automation_controller_hostname, username=_automation_controller_username, password=_automation_controller_password, verify_ssl=False) }}"
-  when: item.name in ['rtr1', 'rtr2']
-
 - name: Get Controller token
   ansible.controller.token:
     controller_username: "{{ _automation_controller_username }}"
