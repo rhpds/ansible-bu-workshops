@@ -16,6 +16,15 @@
     scm_type: git
     scm_url: https://github.com/zjpeterson/ansible-cisco-telemetry.git
 
+- name: Add EE in Controller
+  ansible.controller.execution_environment:
+    controller_username: "{{ _automation_controller_username }}"
+    controller_password: "{{ _automation_controller_password }}"
+    controller_host: "https://{{ _automation_controller_hostname }}"
+    validate_certs: false
+    name: Lab EE
+    image: quay.io/zachp/lab-ee
+
 - name: Add vars to Controller hosts
   vars:
     _new_vars: "{{ lookup('file', role_path + '/files/host_vars/' + item.name + '.yml') | from_yaml }}"
