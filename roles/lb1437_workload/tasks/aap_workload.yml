@@ -63,6 +63,6 @@
     controller_password: "{{ _automation_controller_password }}"
     controller_host: "https://{{ _automation_controller_hostname }}"
     validate_certs: false
-    name: Quay DE
+    name: Lab DE
     organization: Default
     image_url: quay.io/ansible/ansible-rulebook:v1.1.3
