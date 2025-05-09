@@ -33,8 +33,8 @@
 
     - name: Install collections
       ansible.builtin.command:
-        cmd: ansible-galaxy collection install ansible.eda cisco.ios git+https://github.com/zjpeterson/network.telemetry.git
-        creates: /home/student/.ansible/collections/ansible_collections/network/telemetry
+        cmd: ansible-galaxy collection install ansible.eda:==2.6.1 ansible.netcommon:=7.2.0 cisco.ios:==9.2.0
+        creates: /home/student/.ansible/collections/ansible_collections/cisco/ios
 
     - name: Pull down git repo
       ansible.builtin.git:
