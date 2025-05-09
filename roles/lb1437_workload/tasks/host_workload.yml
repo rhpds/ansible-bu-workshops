@@ -25,11 +25,11 @@
         executable: pip3
         state: present
         name:
-          - ansible-rulebook
-          - ansible-pylibssh
+          - ansible-rulebook==1.1.3
+          - ansible-pylibssh==1.2.2
           - psycopg[binary]
-          - aiokafka
-          - paramiko
+          - aiokafka==0.12.0
+          - paramiko==3.5.1
 
     - name: Install collections
       ansible.builtin.command:
