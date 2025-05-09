@@ -16,10 +16,6 @@
         regexp: '^stdout_callback'
         state: absent
 
-    - name: Pull YANG Suite image
-      containers.podman.podman_image:
-        name: quay.io/zachp/yangsuite
-
 - name: Tasks as student
   become: true
   become_user: student
